@@ -1,3 +1,16 @@
+// ==================
+
+// Controller's Serial Settings (see page 143 of ICC402-REG-MAN.pdf):
+MEM &BAUDRATE1 = 7 // 115,200 baud; 8 data bits; no parity; 2ms transmit delay (see page 144)
+MEM &SERIAL_ADDRESS1 = 1
+MEM &SERIAL_MODE1 = 4 // Ethernet
+
+MEM &BAUDRATE2 = 7 // 115,200 baud; 8 data bits; no parity; 2ms transmit delay (see page 144)
+MEM &SERIAL_ADDRESS2 = 1
+MEM &SERIAL_MODE2 = 0 // ASCII protocol
+
+// ==================
+
 REG &LT01 = &AUX8
 MEM &AUX8_TEXT = "LT01 %"
 MEM &DISPLAY_FORMAT_AUX8  = 6 //x.x
