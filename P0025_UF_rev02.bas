@@ -1,13 +1,21 @@
 // ==================
-
 // Controller's Serial Settings (see page 143 of ICC402-REG-MAN.pdf):
+
+// Port 1
 MEM &BAUDRATE1 = 7 // 115,200 baud; 8 data bits; no parity; 2ms transmit delay (see page 144)
 MEM &SERIAL_ADDRESS1 = 1
 MEM &SERIAL_MODE1 = 4 // Ethernet
 
+// Port 2
 MEM &BAUDRATE2 = 7 // 115,200 baud; 8 data bits; no parity; 2ms transmit delay (see page 144)
 MEM &SERIAL_ADDRESS2 = 1
 MEM &SERIAL_MODE2 = 0 // ASCII protocol
+
+// ==================
+// Start up text (visible for about a second after powering on)
+                        // 1234567890123456
+MEM &STARTUP_TEXT_LINE1 = "Membrane Process"
+MEM &STARTUP_TEXT_LINE2 = "      HOF5      "
 
 // ==================
 
