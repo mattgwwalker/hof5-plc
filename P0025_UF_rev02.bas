@@ -1,3 +1,16 @@
+// WARNING:
+// * There is not a check on air pressure in this system.  As a consequence insufficient
+//   air pressure can cause undetectable problems.
+
+// Calibration settings for the controller used 20/4/2015:                                  
+// Analogue inputs:
+//   - Scale factor: 0.663
+//   - Offset: -2481
+// Analogue outputs:
+//   - Low: -22,200
+//   - High: 20,110
+ 
+
 // ==================
 // Controller's Serial Settings (see page 143 of ICC402-REG-MAN.pdf):
 
@@ -11,8 +24,163 @@ MEM &BAUDRATE2 = 7 // 115,200 baud; 8 data bits; no parity; 2ms transmit delay (
 MEM &SERIAL_ADDRESS2 = 1
 MEM &SERIAL_MODE2 = 0 // ASCII protocol
 
+
+// ==================
+// SMART Input module 1 (ISOP1); code sourced from the wayback machine from 
+// texmate.co.nz back in 2010.
+//  Input Module Type: ISOP1
+//  Smart 8 channel process input module
+//
+//  &SMART_RESULT1 = Current input 1
+//  &SMART_RESULT2 = Current input 2
+//  &SMART_RESULT3 = Current input 3
+//  &SMART_RESULT4 = Current input 4
+//  &SMART_RESULT5 = Current input 5
+//  &SMART_RESULT6 = Current input 6
+//  &SMART_RESULT7 = Current input 7
+//  &SMART_RESULT8 = Current input 8
+//
+//
+
+// When reading or writing to these code registers the data is treated in 
+// octal format. The 1st digit of each Code register is stored in bits 6 and 7.
+// The 2nd digit of each Code register is stored in bits 3, 4, and 5. The 3rd 
+// digit of each Code register is stored in bits 0, 1, and 2.
+// For example:
+// If the setup for Code 4 shows 241 on the display, then reading register 8197
+// in ASCII mode results in a value of 241. Converting this octal value to a 
+// binary equivalent of 10100001 or hexadecimal equivalent of 0A1.
+
+
+// Code 2 (Channel 1) provide the settings to select noise rejection, analog 
+// sampling rate, and output rate for all input channels. It also allows you to
+// select the input signal type and range setting for CH1.
+// First digit
+// 0: Sample rate of 10 samples/second (divided by the number of channels),
+//    thus 1.25 samples/second/channel.
+// Second digit
+// 7: Smart input module
+// Third digit
+// 0: Averaged signal 1
+// 1: Averaged signal 2
+// 2: Averaged signal 3
+// 3: Averaged signal 4
+// 4: Averaged signal 5
+// 5: Averaged signal 6
+// 6: Averaged signal 7
+MEM &CODE2 = 070
+
+// Code 3 (Channel 1):
+// First digit
+// 0: No processing on channel 1
+// 1: Square root of channel 1
+// 2: Inverse of channel 1
+// Second digit
+// 0: No linearization
+// Third digit:
+// Not used
+mem &CODE3=000
+
+// Code 4 (Channel 2):
+// First digit
+// 0: Voltage, Current
+// Second Digit
+// 4: Averaged signal 1
+// 5: Averaged signal 2
+// 6: Averaged signal 3
+// 7: Averaged signal 4
+mem &CODE4=050
+
+// Code 5 (Channel 3):
+// First digit
+// 0: No processing of channel 3
+// 1: Square root of channel 3
+// 2: Inverse of channel 3
+// 3: 32-point linearization of channel 3 using table 3
+// Second digit
+// 7: Smart input module
+// Third digit
+// 0: Averaged signal 1
+// 1: Averaged signal 2
+// 2: Averaged signal 3
+// 3: Averaged signal 4
+// 4: Averaged signal 5
+// 5: Averaged signal 6
+// 6: Averaged signal 7
+mem &CODE5=072
+
+// Code 6 (Channel 4):
+// First digit
+// 0: No processing of channel 4
+// 1: Square root of channel 4
+// 2: Inverse of channel 4
+// 3: 32-point linearization of channel 4 using table 4
+// Second digit
+// 7: Smart input module
+// Third digit
+// 0: Averaged signal 1
+// 1: Averaged signal 2
+// 2: Averaged signal 3
+// 3: Averaged signal 4
+// 4: Averaged signal 5
+// 5: Averaged signal 6
+// 6: Averaged signal 7
+mem &CODE6=073
+
+// Code 7 (Result):
+// First digit
+// 0: No processing of Result
+// 1: Square root of Result
+// 2: Inverse of Result
+// Second digit
+// 0: No linearization
+// Third digit
+// 0: Result register not updated
+MEM &CODE7 = 000
+
+
+// Smart Setup 1: [This is the best information I could find on this module (Mattthew 20/4/2015)] 
+// 1st digit = frequency select                                                       
+// 0 =
+// 1 = 60hz
+// 2 =
+// 3 = 50hz
+//
+// 2nd digit=voltage range
+// 0 =
+// 1 =
+// 2 =
+// 3 =
+// 4 =
+// 5 =
+// 6 =
+//
+// 3rd digit= output rate
+// 0 =
+// 1 =
+// 2 =
+// 3 =
+// 4 =
+// 5 =
+MEM &SMART_SETUP1=0300 // For some reason the zero at the front is
+                       // important for the compiler.
+
+
+MEM &DATA_SOURCE_CH5 = ADDR(&SMART_RESULT5 )
+MEM &DATA_SOURCE_CH6 = ADDR(&SMART_RESULT6 )
+MEM &DATA_SOURCE_CH7 = ADDR(&SMART_RESULT7 )
+MEM &DATA_SOURCE_RESULT = ADDR(&SMART_RESULT8 )
+
+// No other SMART modules are installed
+MEM &SMART_SETUP2 = 0
+MEM &SMART_SETUP3 = 0
+
+
+
+
 // ==================
 // Start up text (visible for about a second after powering on)
+// Two lines of 16 characters each:
                         // 1234567890123456
 MEM &STARTUP_TEXT_LINE1 = "Membrane Process"
 MEM &STARTUP_TEXT_LINE2 = "      HOF5      "
@@ -104,8 +272,9 @@ REG &fault = &AUX7
 MEM &fault = 0
 MEM &AUX7_TEXT = "Fault #"
 MEM &DISPLAY_FORMAT_AUX7 = 0 //x
+                      //1234567890123456 
 DIM faultMsgArray[] = ["No Faults       ",\
-                       "Hi Temp         ",\
+                       "     High Temperature     ",\
                           "",\
                           "",\
                           "",\
@@ -218,51 +387,85 @@ BIT |SV63_O = |DO_16
 //User_Memory_1 to 99 Display Format x.x
 MEM &USER_MEMORY16_BAND1 = 5219
 MEM &DISPLAY_FORMAT_USER16_BAND1 = 6
-REG &LT01SP01 = &USER_MEMORY_1 //Min PP02 Speed @ this level
-REG &LT01SP02 = &USER_MEMORY_2 //Max PP02 Speed @ this level
+REG &LT01SP01 = &USER_MEMORY_1
+MEM &LT01SP01 = 200 // 20.0%: Minimum pump 2 speed below this level (for permeate tank pump out)
+REG &LT01SP02 = &USER_MEMORY_2
+MEM &LT01SP02 = 500 // 50.0%: Maximum pump 2 speed above this level (for permeate tank pump out)
 REG &LT01SP03 = &USER_MEMORY_3 //Restart Prod, After Pump Out Of Retentate
+MEM &LT01SP03 = 200 // 20.0%: Maximum permeate tank level at which we start production
 REG &LT01SP04 = &USER_MEMORY_4 //Stop Prod, Pump Out Retentate
+MEM &LT01SP04 = 800 // 80.0%: Maximum permeate tank level during production
 REG &LT01SP05 = &USER_MEMORY_5 //Min Level For BW  
+MEM &LT01SP05 = 150 // 15.0%: Minimum permeate tank level for backwash
 REG &LT01SP06 = &USER_MEMORY_6 //Empty Level
+MEM &LT01SP06 = 0 // 0.0%: Level at which emptying of the permeate tank becomes time-based
 
 REG &T1SP13 = &USER_MEMORY_7
+MEM &T1SP13 = 3000  // 300.0 seconds (5 mins, max is 3276.8 seconds): 
+                    // Duration of production before backwash
 REG &T2SP13 = &USER_MEMORY_8
+MEM &T2SP13 = 27000 // 2700.0 seconds (45 mins, max is 3276.8 seconds): 
+                    // Total duration of CIP (including backwashes)
 
 REG &T0SP09 = &USER_MEMORY_9
+MEM &T0SP09 = 30 // 3.0 seconds for the valves to transition for module 1 backflush
 REG &T0SP10 = &USER_MEMORY_10
+MEM &T0SP10 = 100 // 10.0 seconds for module 1 to backflush
 REG &T0SP11 = &USER_MEMORY_11
+MEM &T0SP11 = 30 // 3.0 seconds for the valves to transition for module 2 backflush
 REG &T0SP12 = &USER_MEMORY_12
+MEM &T0SP12 = 100 // 10.0 seconds for module 2 to backflush
 REG &T0SP13 = &USER_MEMORY_13
+MEM &T0SP13 = 30 // 3.0 seconds for the valves to transition for module 3 backflush
 REG &T0SP14 = &USER_MEMORY_14
+MEM &T0SP14 = 100 // 10.0 seconds for module 3 to backflush
 REG &T0SP18 = &USER_MEMORY_15
+MEM &T0SP18 = 200 // 20.0 seconds for pump 2 to run when permeate tank has gone 
+                  // below detectable level
 REG &T0SP19 = &USER_MEMORY_16
+MEM &T0SP19 = 200 // 20.0 seconds for pump 1 to run when feed tank has gone 
+                  // below detectable level
 
 REG &T1SP33 = &USER_MEMORY_17
 REG &T2SP33 = &USER_MEMORY_18
 
 REG &TT01SP01 = &USER_MEMORY_25
-MEM &TT01SP01 = 900
+MEM &TT01SP01 = 600 // High temperature threshold: 60.0 deg C
 
 REG &LT02SP01 = &USER_MEMORY_31 //Empty Level
+MEM &LT02SP01 = 0  // 0.0% is empty
 REG &LT02SP02 = &USER_MEMORY_32 //Stop Fill Level
+MEM &LT02SP02 = 300 // 30.0%: Stop filling the feed tank above this level 
 REG &LT02SP03 = &USER_MEMORY_33 //Start Fill Level
+MEM &LT02SP03 = 250 // 25.0%: Start filling the feed tank below this level
 REG &LT02SP04 = &USER_MEMORY_34 //Stop Production
+MEM &LT02SP04 = 50 // 5.0%: Stop production if the feed tank gets below this level 
 REG &LT02SP05 = &USER_MEMORY_35 //Start Production
+MEM &LT02SP05 = 100 // 10.0%: Start production once the feed tank is above this level
 
 //User_Memory_100 to 199 Display Format x.xx
 MEM &USER_MEMORY16_BAND2 = 5319
 MEM &DISPLAY_FORMAT_USER16_BAND2 = 5
 
 REG &PP01SP01 = &USER_MEMORY_100
+MEM &PP01SP01 = 2000 // 20.00% Pump 1's default production speed (occurs if switch set to 'off' position) 
 REG &PP01SP02 = &USER_MEMORY_101
+MEM &PP01SP02 = 2000 // 20.00% Pump 1's default CIP speed (occurs if switch set to 'off' position) 
 REG &PP01SP03 = &USER_MEMORY_102
+MEM &PP01SP03 = 3000 // 30.00% Pump 1's speed to empty feed tank 
+
 
 REG &PP02SP02 = &USER_MEMORY_104
 REG &PP02SP03 = &USER_MEMORY_105
 REG &PP02SP04 = &USER_MEMORY_106
+MEM &PP02SP04 = 3000 // 30.00%: Pump speed during emptying of permeate tank
 REG &PP02SP05 = &USER_MEMORY_107
+MEM &PP02SP05 = 3000 // 30.00%: Minimum pump speed during permeate tank pump out (see also LT01SP01)
 REG &PP02SP06 = &USER_MEMORY_108
+MEM &PP02SP06 = 8000 // 80.00%: Maximum pump speed during permeate tank pump out (see also LT01SP02)
 REG &PP02SP07 = &USER_MEMORY_109
+MEM &PP02SP07 = 3500 // 35.00%: Miminum calculated pump speed before we restart 
+                     //         permeate tank pump out
 
 //SS_Prod
 REG &PP01SP11 = &USER_MEMORY_110
@@ -285,21 +488,38 @@ REG &PP02SP39 = &USER_MEMORY_134
 
 ///Poly_Prod
 REG &PP01SP41 = &USER_MEMORY_140
+MEM &PP01SP41 = 8500              // 85.00%: Pump 1's speed during production
+                                  //         (worked well at 93% on water)
 REG &PP01SP42 = &USER_MEMORY_141
+MEM &PP01SP42 = 5000              // 50.00%: Pump 1's speed during module 
+                                  //         backwash and setting of the valves
 REG &PP02SP42 = &USER_MEMORY_142
+MEM &PP02SP42 = 6000              // 60.00%: Pump 2's speed during setting of 
+                                  //         the valves before module backwash
 REG &PP02SP43 = &USER_MEMORY_143
+MEM &PP02SP43 = 8500              // 85.00%: Pump 2's speed during module backwash
 
 //Poly_Prod_Conc
 REG &PP01SP51 = &USER_MEMORY_150
+MEM &PP01SP51 = 5000              // 50.00%: Pump 1's speed during concentration
 REG &PP01SP52 = &USER_MEMORY_151
 REG &PP02SP52 = &USER_MEMORY_152
 REG &PP02SP53 = &USER_MEMORY_153
 
 //Poly_CIP
 REG &PP01SP61 = &USER_MEMORY_160
-REG &PP01SP62 = &USER_MEMORY_161
+MEM &PP01SP61 = 8500              // 85.00%: Pump 1's speed during CIP
+REG &PP01SP62 = &USER_MEMORY_161           
+MEM &PP01SP62 = 5000              // 50.00%: Pump 1's speed (during CIP) during  
+                                  //         module backwash and setting of the 
+                                  //         valves
 REG &PP02SP62 = &USER_MEMORY_162
+MEM &PP02SP62 = 6000              // 60.00%: Pump 2's speed (during CIP) during  
+                                  //         setting of the valves before module
+                                  //         backwash
 REG &PP02SP63 = &USER_MEMORY_163
+MEM &PP02SP63 = 8500              // 85.00%: Pump 2's speed (during CIP) during
+                                  //         module backwash
 REG &PP02SP69 = &USER_MEMORY_164
 
 //User_Memory_200 to 299 Display Format x.xxx
@@ -674,6 +894,8 @@ RESET_MACRO:
  &fd100StepNumber = 0
  &fd100StepNumberLastLog = 0
  &T0acc = 0
+ &T1acc = 0
+ &T2acc = 0
  |AFI = OFF
  &FT01count = 0
  &fault = 0
@@ -927,7 +1149,8 @@ MAIN_MACRO:
     ENDIF
  &SEL_TYPE = &Temp1
  
- //Calculate Pump Speed based on level
+    // Calculate pump speed based on level; set between minimum and maximum 
+    // speeds for pump 2 based on minimum and maxmimum levels in permeate tank
     IF &LT01 < &LT01SP01 THEN
      &Calc06 = &PP02SP05
     ELSIF &LT01 > &LT01SP02 THEN
@@ -955,26 +1178,31 @@ MAIN_MACRO:
  &Temp1 = &fd100StepNumber
  SELECT &fd100StepNumber
   CASE 0: //Reset
+   // Check the state of the switch indicating membrane type 
+   // (SS = Stainless Steel, Poly = Polysolphone)
+   // SW08 is the CIP/Production switch
+   // SW09_1 is Stainless Steel
+   // SW09_2 is Polysolphone
    &SEL_TYPE = 0 //0=NA 1=SS_Prod 2=SS_Prod_Conc 3=SS_CIP 4=Poly_Prod 5=Poly_Prod_Conc 6=Poly_CIP
-    IF |SW09_1 = ON THEN
-     IF |SW08 = ON THEN
-      &SEL_TYPE = 3 
-     ELSE
-      &SEL_TYPE = 1
-     ENDIF
+   IF |SW09_1 = ON THEN
+    IF |SW08 = ON THEN      
+     &SEL_TYPE = 3 
+    ELSE
+     &SEL_TYPE = 1
     ENDIF
-    IF |SW09_2 = ON THEN
-     IF |SW08 = ON THEN
-      &SEL_TYPE = 6 
-     ELSE
-      &SEL_TYPE = 4
-     ENDIF
-    ENDIF 
+   ENDIF
+   IF |SW09_2 = ON THEN
+    IF |SW08 = ON THEN
+     &SEL_TYPE = 6 
+    ELSE
+     &SEL_TYPE = 4
+    ENDIF
+   ENDIF 
    
-   |PB01_L = OFF
+   |PB01_L = OFF  // Start button light
    |PB02_L = OFF
    |PB03_L = OFF
-   |PB04_L = ON
+   |PB04_L = ON   // Stop button light
    |PB06_L = OFF   
    |IV01autoOut = OFF //Module 1 Inlet 
    |IV02autoOut = OFF //Module 2 Inlet
@@ -989,35 +1217,35 @@ MAIN_MACRO:
    |SV62autoOut = OFF //Retentate/FeedTank Out
    |SV63autoOut = OFF //FeedTank Inlet
    |PP01autoOut = OFF //Main Feed Pump
-   &PP01S = 0 
+   //&PP01S = 0 
    |PP02autoOut = OFF //Backwash Pump
-   &PP02S = 0
+   //&PP02S = 0
 
-     SELECT &SEL_TYPE
-      CASE 1: //SS_Production_Fill      
-       |PB07_L = OFF //CONC_PUSHBUTTON_LED
-       &T2acc = 0
+   SELECT &SEL_TYPE
+    CASE 1: //SS_Production_Fill      
+     |PB07_L = OFF //CONC_PUSHBUTTON_LED
+     &T2acc = 0
        
-      CASE 2: //SS_Production_Concentrate
-       |PB07_L = ON //CONC_PUSHBUTTON_LED
-       &T2acc = 0       
+    CASE 2: //SS_Production_Concentrate
+     |PB07_L = ON //CONC_PUSHBUTTON_LED
+     &T2acc = 0       
                
-      CASE 3: //SS_CIP
-       |PB07_L = OFF //CONC_PUSHBUTTON_LED
+    CASE 3: //SS_CIP
+     |PB07_L = OFF //CONC_PUSHBUTTON_LED
               
-      CASE 4: //Poly_Production_Fill
-       |PB07_L = OFF //CONC_PUSHBUTTON_LED
-       &T2acc = 0       
+    CASE 4: //Poly_Production_Fill
+     |PB07_L = OFF //CONC_PUSHBUTTON_LED
+     &T2acc = 0       
         
-      CASE 5: //Poly_Production_Concentrate
-       |PB07_L = ON //CONC_PUSHBUTTON_LED
-       &T2acc = 0
+    CASE 5: //Poly_Production_Concentrate
+     |PB07_L = ON //CONC_PUSHBUTTON_LED
+     &T2acc = 0
          
-      CASE 6: //Poly_CIP
-       |PB07_L = OFF //CONC_PUSHBUTTON_LED
+    CASE 6: //Poly_CIP
+     |PB07_L = OFF //CONC_PUSHBUTTON_LED
                             
-      DEFAULT:
-     ENDSEL
+    DEFAULT:
+   ENDSEL
    
    &T0acc = 0  
    
@@ -1031,10 +1259,10 @@ MAIN_MACRO:
     &Temp1 = 19 
    ENDIF
 
-  CASE 17: //Check level in feedtank
+  CASE 17: // Start filling the feed tank
    //No fault state
    IF &fault = 0 THEN
-    |PB01_L = ON
+    |PB01_L = ON   // Start button
     |PB02_L = OFF
     |PB03_L = OFF
     |PB04_L = OFF
@@ -1141,7 +1369,7 @@ MAIN_MACRO:
     ENDIF
    ENDIF
    
-  CASE 1: //Check level
+  CASE 1: // Pump out the permeate tank
    //No fault state
    IF &fault = 0 THEN
     |PB01_L = ON
@@ -1168,6 +1396,7 @@ MAIN_MACRO:
     |PP01autoOut = OFF
     &PP01S = 0
     
+    // Quietly pump out permeate tank if it's over the set point limit
     |PP02autoOut = ON
     &PP02S = &PP02S_LVL
 
@@ -1213,6 +1442,7 @@ MAIN_MACRO:
     //Transistion Condtions
     &T0acc = 0
     IF |OP_STOPons = ON THEN
+       &Temp1 = 20
     ELSIF (&LT01 <= &LT01SP03) THEN
        &Temp1 = 3
     ENDIF
@@ -1243,7 +1473,7 @@ MAIN_MACRO:
     ENDIF
    ENDIF
  
-  CASE 3: //Production
+  CASE 3: // Production / CIP
    //No fault state
    IF &fault = 0 THEN
     |PB01_L = ON
@@ -1267,11 +1497,14 @@ MAIN_MACRO:
     |SV62autoOut = OFF //Retentate/FeedTank Out     
            
     |PP01autoOut = ON
-    
+
+    // Turn pump 2 off once the calculated speed gets to the minimum (SP05)    
     IF (&PP02S_LVL <= &PP02SP05) THEN
      |PP02autoOut = OFF
      |IV17autoOut = OFF    
-    ELSE
+    ENDIF
+    // Turn pump 2 back on once the calculated speeds gets above a minimum (SP07)
+    IF (&PP02S_LVL >= &PP02SP07) THEN
      |PP02autoOut = ON
      |IV17autoOut = ON
     ENDIF
@@ -1335,10 +1568,10 @@ MAIN_MACRO:
     &T1acc = &T1acc + &lastScanTimeShort
     IF |OP_STOPons = ON THEN
      &Temp1 = 20
-    ELSIF (&T2acc >= &T2SP13) THEN
+    ELSIF (&T2acc >= &T2SP13) THEN // Check if CIP timer is over limit
      &Temp1 = 20
      &T2acc = 0 //Reset CIP Timer
-    ELSIF (&T1acc >= &T1SP13) OR (|OP_BWons = ON) THEN
+    ELSIF (&T1acc >= &T1SP13) OR (|OP_BWons = ON) THEN  // Checks if production timer is up before going to a backwash
      &Temp1 = 7
     ELSIF &LT01 >= &LT01SP04 THEN
      &Temp1 = 1
@@ -1369,7 +1602,7 @@ MAIN_MACRO:
     ENDIF
    ENDIF           
 
-  CASE 7: //Fill Tank For Backwash
+  CASE 7: // Fill permeate tank for backwash
    //No fault state
    IF &fault = 0 THEN
     |PB01_L = ON
@@ -1488,7 +1721,7 @@ MAIN_MACRO:
     |PB04_L = OFF
     |PB06_L = OFF
     
-    //|IV01autoOut = ON Module 1 Inlet Only For Poly
+    //|IV01autoOut = ON Module 1 Inlet Only For Poly (see below)
     |IV07autoOut = ON //Module 1 Backwash
     |IV09autoOut = ON //Module 1 Permeate
          
@@ -2264,6 +2497,7 @@ MAIN_MACRO:
       
     ENDSEL
    
+    // If the feed tank is below the 'empty' level, start timing
     IF &LT02 < &LT02SP01 THEN
      &T0acc = &T0acc + &lastScanTimeShort
     ELSE
