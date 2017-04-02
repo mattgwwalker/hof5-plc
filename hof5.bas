@@ -1,6 +1,6 @@
 // WARNING:
 // * There is not a check on air pressure in this system.  As a consequence insufficient
-//   air pressure can cause undetectable problems.
+//   air pressure can cause undetectable problems.                                              
 
 // Calibration settings for the controller used 20/4/2015:                                  
 // Analogue inputs:
@@ -889,6 +889,16 @@ MEM &LOG_REG30 = 0
 MEM &LOG_REG31 = 0
 MEM &LOG_REG32 = 0  
 
+
+// *****************************************************************************
+// *
+// *                     Reset Macro
+// *
+// *****************************************************************************
+
+// This macro is called when the power is turned on to the controller
+  
+
 RESET_MACRO:
  &displayState = 0
  &fd100StepNumber = 0
@@ -901,6 +911,18 @@ RESET_MACRO:
  &fault = 0
  &faultLastLog = 0
 END
+
+
+
+// *****************************************************************************
+// *
+// *                     Main Macro
+// *
+// *****************************************************************************
+
+// This macro is called repeatedly while the controller is running
+
+
 
 MAIN_MACRO:
 
@@ -927,8 +949,8 @@ MAIN_MACRO:
  &FT02 = ((&CH5 + 30) * 0.5059)
  
  &faultNew = 0
- IF &TT01 > &TT01SP01 THEN
-  &faultNew = 1
+ IF &TT01 > &TT01SP01 AND &fd100StepNumber<>0 THEN
+  &faultNew = 1  // High temperature and not stopped
  ENDIF
  IF &faultNew > 0 THEN
   &fault = &faultNew
@@ -962,6 +984,15 @@ MAIN_MACRO:
  |IV10deeng = |IV10_D
  |IV17eng = |IV17_E
  |IV17deeng = |IV17_D
+  
+  
+
+// *****************************************************************************
+// *
+// *                     Display
+// *
+// *****************************************************************************
+  
   
  //Determine which values to show on local display
  SELECT &displayState 
@@ -1174,6 +1205,14 @@ MAIN_MACRO:
     ELSE
      &PP02S_LVL = &Calc06    
     ENDIF
+
+
+
+// *****************************************************************************
+//
+//                      Main control sequence: FD100
+//
+// *****************************************************************************
   
  &Temp1 = &fd100StepNumber
  SELECT &fd100StepNumber
@@ -2650,7 +2689,16 @@ MAIN_MACRO:
   
  NEXT &Temp1
  
- //Valve and Motor Logic
+
+
+// *****************************************************************************
+//
+// Valve and Motor logic
+//
+// ***************************************************************************** 
+
+// Loop through the automatic valves.
+
  FOR &Temp1 = 1 TO 14 STEP 1
   //Get Values  
   &XXstatus = &XXstatus[&Temp1*8]
