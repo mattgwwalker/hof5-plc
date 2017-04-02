@@ -1,0 +1,40 @@
+HOF5 Commissioning
+==================
+
+Connect to the network port on the PLC at 192.168.1.2.
+
+Using the Texmate Development System, compile hof5.bas and open the
+port to the PLC.
+
+
+To confirm communication:
+-------------------------
+ - add User/UserVariables/TT01 to the watch window
+ - turn the watch on
+ - check that the value for TT01 from the PLC matches the value on the
+   LED screen.
+
+
+To modify the state of a valve:
+-------------------------------
+ - ensure that the plant is in the stopped state (fd100StepNumber == 0)
+ - the cmd variable (for example, IV01cmd) sets the valve to one of three
+   states:
+     0 -> None (This causes no change in state.)
+     1 -> Auto
+     2 -> Manual Off
+     3 -> Manual On
+ - add the cmd variable to the watch window (find the variable under
+   User/UserVariables)
+ - turn the watch on
+ - double click on the variable in the watch window
+ - type the new value and press enter
+ 
+Note that the valves require air pressure to function, and the system
+DOES NOT check that there is sufficient, or even any, air pressure.
+Further, note that the valve may already be in the desired state.  To
+check that it is working change the state from off to on and then to
+auto.  If everything is working correctly, this should change the
+valve position and then return it back again to its original position.
+
+
