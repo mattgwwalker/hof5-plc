@@ -1,6 +1,12 @@
 // WARNING:
-// * There is not a check on air pressure in this system.  As a consequence insufficient
-//   air pressure can cause undetectable problems.                                              
+// * There is not a check on air pressure in this system.  As a consequence 
+//   insufficient air pressure can cause undetected problems.   
+//
+//   2017-04-03: It would be possible to detect, at some level, insufficient air
+//   pressure.  IV07, for example, could be asked to change position when 
+//   transitioning from the reset state.  If it failed to make the transition 
+//   from on to off and back again, then an insufficient air pressure fault 
+//   could be raised.                                           
 
 // Calibration settings for the controller used 20/4/2015:                                  
 // Analogue inputs:
@@ -238,26 +244,28 @@ REG &fd100StepNumber = &AUX5
 MEM &fd100StepNumber = 0 
 MEM &AUX5_TEXT = "Step"
 MEM &DISPLAY_FORMAT_AUX5 = 0 //x
-DIM fd100StepMsgArray[] = ["Reset           ",\
-                          "    Check Level In Permeate Tank",\
+
+                       // "1234567890123456": Display is 16 characters wide
+DIM fd100StepMsgArray[] =["Reset           ",\
+                          "    Check Level In Permeate Tank     ",\
                           "",\
                           "Production      ",\
                           "",\
                           "",\
                           "",\
-                          "    Fill Tank For Backwash",\
+                          "    Fill Tank For Backwash     ",\
                           "",\
-                          "    Module 1 Backwash - Set Valves",\
-                          "    Module 1 Backwash - Run Pump",\
-                          "    Module 2 Backwash - Set Valves",\
-                          "    Module 2 Backwash - Run Pump",\
-                          "    Module 3 Backwash - Set Valves",\
-                          "    Module 3 Backwash - Run Pump",\
+                          "    Module 1 Backwash - Set Valves     ",\
+                          "    Module 1 Backwash - Run Pump     ",\
+                          "    Module 2 Backwash - Set Valves     ",\
+                          "    Module 2 Backwash - Run Pump     ",\
+                          "    Module 3 Backwash - Set Valves     ",\
+                          "    Module 3 Backwash - Run Pump     ",\
                           "",\
                           "",\
-                          "    Check Level In Feed Tank",\
-                          "    Empty Permeate Tank",\
-                          "    Empty Retentate \ Feedtank",\
+                          "    Check Level In Feed Tank     ",\
+                          "    Empty Permeate Tank     ",\
+                          "    Empty Retentate \ Feedtank     ",\
                           "End             "]
                     
 REG &T1acc = &AUX6
@@ -272,28 +280,29 @@ REG &fault = &AUX7
 MEM &fault = 0
 MEM &AUX7_TEXT = "Fault #"
 MEM &DISPLAY_FORMAT_AUX7 = 0 //x
-                      //1234567890123456 
+
+                    // "1234567890123456": Display is 16 characters wide
 DIM faultMsgArray[] = ["No Faults       ",\
                        "     High Temperature     ",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          "",\
-                          ""]
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       "",\
+                       ""]
 
 //BitFlags
 BIT |AFI = |GPF1 
@@ -420,8 +429,8 @@ MEM &T0SP13 = 30 // 3.0 seconds for the valves to transition for module 3 backfl
 REG &T0SP14 = &USER_MEMORY_14
 MEM &T0SP14 = 100 // 10.0 seconds for module 3 to backflush
 REG &T0SP18 = &USER_MEMORY_15
-MEM &T0SP18 = 200 // 20.0 seconds for pump 2 to run when permeate tank has gone 
-                  // below detectable level
+MEM &T0SP18 = 700 // 70.0 seconds for pump 2 to run when permeate tank has gone 
+                  // below detectable level.  Commissioned 2017-04-03.
 REG &T0SP19 = &USER_MEMORY_16
 MEM &T0SP19 = 200 // 20.0 seconds for pump 1 to run when feed tank has gone 
                   // below detectable level
@@ -1224,16 +1233,22 @@ MAIN_MACRO:
    // SW09_2 is Polysolphone
    &SEL_TYPE = 0 //0=NA 1=SS_Prod 2=SS_Prod_Conc 3=SS_CIP 4=Poly_Prod 5=Poly_Prod_Conc 6=Poly_CIP
    IF |SW09_1 = ON THEN
+    // Stainless Steel selected
     IF |SW08 = ON THEN      
+     // CIP Selected
      &SEL_TYPE = 3 
     ELSE
+     // Production selected
      &SEL_TYPE = 1
     ENDIF
    ENDIF
    IF |SW09_2 = ON THEN
+    // Polysolphone selected
     IF |SW08 = ON THEN
+     // CIP Selected
      &SEL_TYPE = 6 
     ELSE
+     // Production selected
      &SEL_TYPE = 4
     ENDIF
    ENDIF 
@@ -1393,7 +1408,9 @@ MAIN_MACRO:
        &Temp1 = 1     
      
      CASE 6: //Poly_CIP
-       &Temp1 = 1     
+       &Temp1 = 1             // 2017-04-03: Matthew: Why is this not like 
+                              // Poly_Production?  Why do we not wait for the 
+                              // tank to fill?    
             
     ENDSEL
     
