@@ -196,7 +196,6 @@ configuration was necessary.  Thus the controller needs to be repaired
 before FT01 can be made to work again.
 
 
-
 2017-06-26:
 
 To fix the air pressure being delivered to V03, the air pressure

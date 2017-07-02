@@ -266,7 +266,17 @@ DIM fd100StepMsgArray[] =["Reset           ",\
                           "    Check Level In Feed Tank     ",\
                           "    Empty Permeate Tank     ",\
                           "    Empty Retentate \ Feedtank     ",\
-                          "End             "]
+                          "End             ",\
+                          "",\
+                          "",\
+                          "",\
+                          "",\
+                          "",\
+                          "",\
+                          "",\
+                          "",\
+                          "",\
+                          "    Manual Mode (State #30)     "]
                     
 REG &T1acc = &AUX6
 MEM &AUX6_TEXT = "T1 s"
@@ -333,16 +343,16 @@ REG &Calc05 = &FLOAT_VARIABLE5
 REG &Calc06 = &FLOAT_VARIABLE6
 
 //IO Mapping
-BIT |PB07 = |CI_1
+BIT |PB07 = |CI_1       // Concentrate button
 BIT |SW08 = |CI_2
 BIT |SW09_1 = |CI_3
 BIT |SW09_2 = |CI_4
-BIT |PB01 = |CI_5
-BIT |PB02 = |CI_6
-BIT |PB03 = |CI_7
-BIT |PB04 = |CI_8
-BIT |PB05 = |CI_9
-BIT |PB06 = |CI_10
+BIT |PB01 = |CI_5       // Start button
+BIT |PB02 = |CI_6       // Backflush button
+BIT |PB03 = |CI_7       // Permeate out
+BIT |PB04 = |CI_8       // Stop button
+BIT |PB05 = |CI_9       // Reset button
+BIT |PB06 = |CI_10      // Retentate Out button
 
 BIT |IV08_E = |DI_1
 BIT |IV08_D = |DI_2
@@ -909,16 +919,35 @@ MEM &LOG_REG32 = 0
   
 
 RESET_MACRO:
- &displayState = 0
- &fd100StepNumber = 0
- &fd100StepNumberLastLog = 0
- &T0acc = 0
- &T1acc = 0
- &T2acc = 0
- |AFI = OFF
- &FT01count = 0
- &fault = 0
- &faultLastLog = 0
+  &displayState = 0
+  &fd100StepNumber = 0
+  &fd100StepNumberLastLog = 0
+  &T0acc = 0
+  &T1acc = 0
+  &T2acc = 0
+  |AFI = OFF
+  &FT01count = 0
+  &fault = 0
+  &faultLastLog = 0
+  
+  // Switch all valves to auto
+  &IV01cmd = 1
+  &IV02cmd = 1
+  &IV03cmd = 1
+  &IV05cmd = 1
+  &IV06cmd = 1
+  &IV07cmd = 1
+  &IV08cmd = 1
+  &IV09cmd = 1
+  &IV10cmd = 1
+  &IV17cmd = 1
+  &SV62cmd = 1
+  &SV63cmd = 1
+  
+  // Switch all pumps to auto
+  &PP01cmd = 1
+  &PP02cmd = 1 
+  
 END
 
 
@@ -942,7 +971,8 @@ MAIN_MACRO:
  &lastScanTimeShort = &SHORT_TIMER1
  &SHORT_TIMER1 = &SHORT_TIMER1 - &lastScanTimeShort
 
- //Calculate Flowrate
+ // Calculate Flowrate -- as at 2017-06-29 the capture pin wasn't working, thus
+ // FT01count isn't updating and so FT01 is locked at zero.
  &FT01time = &FT01time + &lastScanTimeShort
  IF (&FT01time >= 20) THEN
   &FT01time = 0
@@ -957,16 +987,22 @@ MAIN_MACRO:
  &TT01 = (&CH4 * 0.1)
  &FT02 = ((&CH5 + 30) * 0.5059)
  
+ // Start the pass by assuming there aren't any faults
  &faultNew = 0
+ // Check for faults
  IF &TT01 > &TT01SP01 AND &fd100StepNumber<>0 THEN
   &faultNew = 1  // High temperature and not stopped
  ENDIF
  IF &faultNew > 0 THEN
+  // A fault has been detected; overwrite the fault variable
   &fault = &faultNew
  ELSIF |PB05 = ON THEN
+  // No faults were detected in this pass and the reset button (PB05) has been
+  // pushed.  This clears the fault variable.
   &fault = &faultNew
  ENDIF
  
+ // Set the fault light (PB05_L)
  IF &fault = 0 THEN
   |PB05_L = OFF
  ELSE
@@ -1297,6 +1333,15 @@ MAIN_MACRO:
          
     CASE 6: //Poly_CIP
      |PB07_L = OFF //CONC_PUSHBUTTON_LED
+     // Allow the membranes to drain if the system is stopped and CIP is
+     // selected
+     |IV05autoOut = ON
+     |IV06autoOut = ON
+     |IV07autoOut = ON
+     |IV08autoOut = ON
+     |IV09autoOut = ON            
+     |IV10autoOut = ON
+     
                             
     DEFAULT:
    ENDSEL
@@ -2604,6 +2649,9 @@ MAIN_MACRO:
    &PP02S = 0
 
    &Temp1 = 0
+   
+  CASE 30:
+   // Do nothing; used for putting the plant into a completely manual mode
   
   DEFAULT:
    &Temp1 = 0
@@ -2652,6 +2700,7 @@ MAIN_MACRO:
   &OP_EMPTYPcmd = 0  
  ENDIF
    
+ 
  IF (|PB05 = ON and &OP_RESETcmd = 0) THEN
   &OP_RESETcmd = 2
  ELSIF (|PB05 = OFF and &OP_RESETcmd = 1) THEN
@@ -3503,6 +3552,9 @@ EDIT_MACRO:
  
 END
 
+// As at 2017-06-29 the capture pin wasn't working, thus this macro isn't being
+// called, which means that FT01count isn't updating, and so FT01 is locked at
+// zero.
 CAPTURE_MACRO:
  &FT01count  = &FT01count + 1 
 END
