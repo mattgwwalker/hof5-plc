@@ -18,6 +18,7 @@ To confirm communication:
 To modify the state of a valve:
 -------------------------------
  - ensure that the plant is in the stopped state (fd100StepNumber == 0)
+   or in the "Manual Test Mode" state (set fd100StepNumber to 30)
  - the cmd variable (for example, IV01cmd) sets the valve to one of three
    states:
      0 -> None (This causes no change in state.)
@@ -76,10 +77,26 @@ Valves V61 and V62 are controlled from the same air isolation valve.
 Thus when one is open then other is mechanically closed.  The only
 time they can both be in the same state (closed) is when there isn't
 any air pressure.
+WARNING: Opening V62 will drain the feedtank.
 V61 - Retentate out - Mode 3, air off, valve closed
 V62 - Isolates retentate circulation - Mode 2, air off, valve closed
 
 V63 - Isolates feedtank supply - Mode 2, air off, valve closed
+
+
+
+
+Buttons and  Lights:
+--------------------
+
+There are seven push buttons with internal lights.  The buttons are
+bits |PB01 to |PB07.  The lights are |PB01_L to |PB07_L.
+
+Bits are difficult to set using the TDS.  If the state is changed to
+Manual Test Mode, by setting fd100StepNumber to 30, the button lights
+will be turned on when the buttons themselves are pressed.
+
+
 
 
 
@@ -183,6 +200,36 @@ ensure the safety of the membrane.
 
 Commissioning notes:
 --------------------
+
+2017-08-03:
+
+Manual test mode (#30) now allows for the push buttons and their
+lights to be tested.  Press and hold the button and the button's light
+will illuminate.
+
+Wiring for button light PB06_L (Retentate Out) had come loose.
+Repaired.
+
+2017-08-02:
+
+PLC screen displayed "43 Err E".  Phoned Anthony who recommended
+re-initialisation of the controller.  His instructions were to click
+"Erase Macro" and then select "Re-initialise".  He said this would
+destroy the unit's analogue settings but they seemed not to be
+affected once the macro was reloaded.
+
+Stainless steel membrane installed for first time in years.  Very low
+permeate flow while testing with water.  It's not much more than
+dribbling out.
+
+2017-07-03:
+
+The reset button does nothing other than clear the reset light.
+
+The concentration button, PB07, does nothing if the plant is in step
+zero.  Outside of that step number, the concentration button alterates
+SEL_TYPE between concentration and not.  If concentration is selected
+then the feedtank inlet valve remains closed.
 
 2017-06-29:
 

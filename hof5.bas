@@ -1,9 +1,9 @@
 // WARNING:
 // * There is not a check on air pressure in this system.  As a consequence 
 //   insufficient air pressure can cause undetected problems.   
-//
+//                                                                                     
 //   2017-04-03: It would be possible to detect, at some level, insufficient air
-//   pressure.  IV07, for example, could be asked to change position when 
+//   pressure.  IV07, for example, could be asked to change position when                             
 //   transitioning from the reset state.  If it failed to make the transition 
 //   from on to off and back again, then an insufficient air pressure fault 
 //   could be raised.                                           
@@ -265,7 +265,7 @@ DIM fd100StepMsgArray[] =["Reset           ",\
                           "",\
                           "    Check Level In Feed Tank     ",\
                           "    Empty Permeate Tank     ",\
-                          "    Empty Retentate \ Feedtank     ",\
+                          "    Empty Feed Tank     ",\
                           "End             ",\
                           "",\
                           "",\
@@ -276,7 +276,7 @@ DIM fd100StepMsgArray[] =["Reset           ",\
                           "",\
                           "",\
                           "",\
-                          "    Manual Mode (State #30)     "]
+                          "    Manual Test Mode (State #30)     "]
                     
 REG &T1acc = &AUX6
 MEM &AUX6_TEXT = "T1 s"
@@ -423,8 +423,10 @@ REG &T1SP13 = &USER_MEMORY_7
 MEM &T1SP13 = 3000  // 300.0 seconds (5 mins, max is 3276.8 seconds): 
                     // Duration of production before backwash
 REG &T2SP13 = &USER_MEMORY_8
-MEM &T2SP13 = 27000 // 2700.0 seconds (45 mins, max is 3276.8 seconds): 
-                    // Total duration of CIP (including backwashes)
+MEM &T2SP13 = 9000  // 900.0 seconds (15 mins, max is 3276.8 seconds): 
+                    // Total duration of each CIP step (including backwashes)
+                    // The CIP steps include rinse, alkali wash, rinse, acid
+                    // wash, rinse.
 
 REG &T0SP09 = &USER_MEMORY_9
 MEM &T0SP09 = 30 // 3.0 seconds for the valves to transition for module 1 backflush
@@ -1032,11 +1034,11 @@ MAIN_MACRO:
   
   
 
-// *****************************************************************************
-// *
-// *                     Display
-// *
-// *****************************************************************************
+ // ****************************************************************************
+ // *
+ // *                     Display
+ // *
+ // ****************************************************************************
   
   
  //Determine which values to show on local display
@@ -1201,29 +1203,50 @@ MAIN_MACRO:
   DEFAULT:
  ENDSEL
 
- //FD101 Production 
+
+
+ // ****************************************************************************
+ //
+ //                      Production sequence: FD101
+ //
+ // ****************************************************************************
+
  &Temp1 = &SEL_TYPE
-    IF (|OP_CONCons = ON) THEN
-     SELECT &SEL_TYPE
-      CASE 1: //SS_Production_Fill
-       &Temp1 = 2
+ IF (|OP_CONCons = ON) THEN
+  SELECT &SEL_TYPE
+   CASE 1: //SS_Production_Fill
+    &Temp1 = 2
       
-      CASE 2: //SS_Production_Concentrate
-       &Temp1 = 1
+   CASE 2: //SS_Production_Concentrate
+    &Temp1 = 1
                
-      CASE 3: //SS_CIP
+   CASE 3: //SS_CIP
+    // Do nothing
               
-      CASE 4: //Poly_Production_Fill
-        &Temp1 = 5
+   CASE 4: //Poly_Production_Fill
+    &Temp1 = 5
         
-      CASE 5: //Poly_Production_Concentrate
-        &Temp1 = 4
+   CASE 5: //Poly_Production_Concentrate
+    &Temp1 = 4
          
-      CASE 6: //Poly_CIP                     
-      DEFAULT:
-     ENDSEL
-    ENDIF
- &SEL_TYPE = &Temp1
+   CASE 6: //Poly_CIP                     
+    // Do nothing
+    
+   DEFAULT:
+    // Do nothing
+  ENDSEL
+ ENDIF
+ &SEL_TYPE = &Temp1  // Note that this is overwritten in Step 0 of FD100, but is
+                     // valid for any other step number.
+
+
+
+ // ****************************************************************************
+ //
+ //                      Pump Speed Calculations
+ //
+ // ****************************************************************************
+
  
     // Calculate pump speed based on level; set between minimum and maximum 
     // speeds for pump 2 based on minimum and maxmimum levels in permeate tank
@@ -1253,20 +1276,20 @@ MAIN_MACRO:
 
 
 
-// *****************************************************************************
-//
-//                      Main control sequence: FD100
-//
-// *****************************************************************************
+ // ****************************************************************************
+ //
+ //                      Main control sequence: FD100
+ //
+ // ****************************************************************************
   
  &Temp1 = &fd100StepNumber
  SELECT &fd100StepNumber
   CASE 0: //Reset
    // Check the state of the switch indicating membrane type 
-   // (SS = Stainless Steel, Poly = Polysolphone)
+   // (SS = Stainless Steel, Poly = Polysulfone)
    // SW08 is the CIP/Production switch
    // SW09_1 is Stainless Steel
-   // SW09_2 is Polysolphone
+   // SW09_2 is Polysulfone
    &SEL_TYPE = 0 //0=NA 1=SS_Prod 2=SS_Prod_Conc 3=SS_CIP 4=Poly_Prod 5=Poly_Prod_Conc 6=Poly_CIP
    IF |SW09_1 = ON THEN
     // Stainless Steel selected
@@ -1279,7 +1302,7 @@ MAIN_MACRO:
     ENDIF
    ENDIF
    IF |SW09_2 = ON THEN
-    // Polysolphone selected
+    // Polysulfone selected
     IF |SW08 = ON THEN
      // CIP Selected
      &SEL_TYPE = 6 
@@ -2545,7 +2568,7 @@ MAIN_MACRO:
     |PB02_L = OFF
     |PB03_L = OFF
     |PB04_L = OFF
-    |PB06_L = ON
+    |PB06_L = ON   // Retentate Out light
 
     |IV01autoOut = OFF //Module 1 Inlet
     |IV07autoOut = OFF //Module 1 Backwash
@@ -2560,7 +2583,7 @@ MAIN_MACRO:
     |IV08autoOut = OFF //Module 3 Permeate
     
     |IV17autoOut = OFF //Permeate Out
-    |SV62autoOut = ON //Retentate/FeedTank Out
+    |SV62autoOut = ON  //Retentate/FeedTank Out
         
     |PP01autoOut = ON
     &PP01S = &PP01SP03
@@ -2651,7 +2674,16 @@ MAIN_MACRO:
    &Temp1 = 0
    
   CASE 30:
-   // Do nothing; used for putting the plant into a completely manual mode
+   // Manual Test Mode XXX
+   
+   |PB01_L = |PB01  // Start button
+   |PB02_L = |PB02  // Backflush button
+   |PB03_L = |PB03  // Permeate button
+   |PB04_L = |PB04  // Stop button
+   |PB05_L = |PB05  // Reset button
+   |PB06_L = |PB06  // Retentate Out button
+   |PB07_L = |PB07  // Concentrate button
+
   
   DEFAULT:
    &Temp1 = 0
@@ -2674,7 +2706,11 @@ MAIN_MACRO:
   &Logtime = 0 
  ENDIF
  
- //Selection Logic
+ // ****************************************************************************
+ //
+ //                      Selection logic for push buttons
+ //
+ // ****************************************************************************
  
  IF (|PB01 = ON and &OP_STARTcmd = 0 and &SEL_TYPE > 0) THEN
   &OP_STARTcmd = 2
@@ -2700,12 +2736,15 @@ MAIN_MACRO:
   &OP_EMPTYPcmd = 0  
  ENDIF
    
- 
- IF (|PB05 = ON and &OP_RESETcmd = 0) THEN
-  &OP_RESETcmd = 2
- ELSIF (|PB05 = OFF and &OP_RESETcmd = 1) THEN
-  &OP_RESETcmd = 0  
- ENDIF
+ // 2017-07-03: The following five lines look like a copy and paste error
+ // It seems like this sould reference PB04 (the stop button), but instead it
+ // is an exact copy of the code of PB05.  PB04 is however already dealt to
+ // above.
+ //IF (|PB05 = ON and &OP_RESETcmd = 0) THEN
+ // &OP_RESETcmd = 2
+ //ELSIF (|PB05 = OFF and &OP_RESETcmd = 1) THEN
+ // &OP_RESETcmd = 0  
+ //ENDIF
  
  IF (|PB05 = ON and &OP_RESETcmd = 0) THEN
   &OP_RESETcmd = 2
@@ -2725,6 +2764,13 @@ MAIN_MACRO:
   &OP_CONCcmd = 0  
  ENDIF 
   
+  
+ // Loop through the seven buttons and set their status bits based on their cmd
+ // variables.
+ // For buttons under normal (no error) conditions, the cmd variable is set to
+ // 2, which turns on both the ons (one shot) and run (running) bits and sets 
+ // the cmd to 1.  On the next pass the ons bit is turned off and the run bit 
+ // remains on.  When the cmd is set to 0, both bits are turned off.
  FOR &Temp1 = 1 TO 7 STEP 1
   &OP_Xstatus = &OP_Xstatus[&Temp1*3]
   &OP_Xcmd = &OP_Xcmd[&Temp1*3]
