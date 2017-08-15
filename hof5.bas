@@ -872,6 +872,22 @@ MEM &OP_EMPTYRcmd = 0
 REG &OP_EMPTYRmsg = &USER_MEMORY_573
 MEM &OP_EMPTYRmsg = 0
 
+// Run timer data
+REG &runTimerSecondsx100 = &USER_MEMORY_572
+REG &runTimerSeconds = &USER_MEMORY_573
+REG &runTimerMinutes = &USER_MEMORY_574
+REG &runTimerHours = &USER_MEMORY_575
+REG &runTimerDays = &USER_MEMORY_576
+
+
+// Up and down buttons
+REG &buttonStatus = &USER_MEMORY_577
+BITREG &buttonStatus = [|upButtonPressed, |downButtonPressed]
+MEM &buttonStatus = 0
+
+
+
+
 MEM &CODE_BLANKING=0
 MEM &VIEW_MODE_BLANKING=0
 MEM &SETPOINT_BLANKING=0
@@ -973,6 +989,25 @@ MAIN_MACRO:
  &lastScanTimeShort = &SHORT_TIMER1
  &SHORT_TIMER1 = &SHORT_TIMER1 - &lastScanTimeShort
 
+ // Increment the "on timer"
+ &runTimerSecondsx100 = &runTimerSecondsx100 + &lastScanTimeFast
+ IF (&runTimerSecondsx100 >= 100) THEN
+  &runTimerSecondsx100 = &runTimerSecondsx100 - 100
+  &runTimerSeconds = &runTimerSeconds + 1
+ ENDIF
+ IF (&runTimerSeconds >= 60) THEN
+  &runTimerSeconds = &runTimerSeconds - 60
+  &runTimerMinutes = &runTimerMinutes + 1
+ ENDIF
+ IF (&runTimerMinutes >= 60) THEN
+  &runTimerMinutes = &runTimerMinutes - 60
+  &runTimerHours = &runTimerHours + 1
+ ENDIF
+ IF (&runTimerHours >=24 ) THEN
+  &runTimerHours = &runTimerHours - 24
+  &runTimerDays = &runTimerDays + 1
+ ENDIF
+
  // Calculate Flowrate -- as at 2017-06-29 the capture pin wasn't working, thus
  // FT01count isn't updating and so FT01 is locked at zero.
  &FT01time = &FT01time + &lastScanTimeShort
@@ -1037,71 +1072,63 @@ MAIN_MACRO:
  // ****************************************************************************
  // *
  // *                     Display
- // *
+ // *                                                
  // ****************************************************************************
   
+// Check if we're in display mode; if so, handle the pressing of buttons 
+ IF (&EDIT_STATE = 0) THEN
+  // Check if the down button has been pushed
+  IF (|DOWN_BUTTON = ON) THEN
+   |downButtonPressed = ON 
+  ENDIF
   
+  // Check if the up button has been pushed
+  IF (|UP_BUTTON = ON) THEN
+   |upButtonPressed = ON 
+  ENDIF
+  
+  // Check if the down button has been released
+  IF (|downButtonPressed = ON and |DOWN_BUTTON = OFF) THEN
+   |downButtonPressed = OFF
+   // Increment display state and loop back to the beginning if necessary
+   &displayState = &displayState + 1
+   IF (&displayState > 11) THEN
+    // Loop back to zero is we've got passed the maximum page  
+    &displayState = 0
+   ENDIF  
+   WRITE "" // Stop the display of any text
+  ENDIF
+  
+  // Check if the up button has been released
+  IF (|upButtonPressed = ON and |UP_BUTTON = OFF) THEN
+   |upButtonPressed = OFF
+   // Decrement display state and loop back to the beginning if necessary
+   &displayState = &displayState - 1
+   IF (&displayState < 0) THEN
+    // Loop back to the maximum page if we go up from the first
+    &displayState = 11
+   ENDIF  
+   WRITE "" // Stop the display of any text
+  ENDIF
+ ENDIF
+
+
+
  //Determine which values to show on local display
  SELECT &displayState 
-  CASE  0: //Display
+  CASE  0:
    &DATA_SOURCE_DISPLAY1 = ADDR(&PT01)
    &DATA_SOURCE_DISPLAY2 = ADDR(&PT04)
-   IF &EDIT_STATE = 0 and |DOWN_BUTTON = ON THEN
-    &displayState = 1
-   ELSIF &EDIT_STATE = 0 and |UP_BUTTON = ON THEN
-    &displayState = 20 
-   ENDIF
   
-  CASE  1: //Check Down
-   IF |DOWN_BUTTON = OFF THEN
-    &displayState = 3
-   ENDIF  
- 
-  CASE  2: //Check Up
-   IF |UP_BUTTON = OFF THEN
-    &displayState = 0
-   ENDIF 
-  
-  CASE  3: //Display
+  CASE  1: 
    &DATA_SOURCE_DISPLAY1 = ADDR(&LT01)
    &DATA_SOURCE_DISPLAY2 = ADDR(&LT02)
-   IF &EDIT_STATE = 0 and |DOWN_BUTTON = ON THEN
-    &displayState = 4
-   ELSIF &EDIT_STATE = 0 and |UP_BUTTON = ON THEN
-    &displayState = 2 
-   ENDIF
   
-  CASE  4: //Check Down
-   IF |DOWN_BUTTON = OFF THEN
-    &displayState = 6
-   ENDIF  
- 
-  CASE  5: //Check Up
-   IF |UP_BUTTON = OFF THEN
-    &displayState = 3
-   ENDIF 
-  
-  CASE  6: //Display
+  CASE  2: 
    &DATA_SOURCE_DISPLAY1 = ADDR(&PP01S)
    &DATA_SOURCE_DISPLAY2 = ADDR(&PP02S)
-   IF &EDIT_STATE = 0 and |DOWN_BUTTON = ON THEN
-    &displayState = 7
-   ELSIF &EDIT_STATE = 0 and |UP_BUTTON = ON THEN
-    &displayState = 5 
-   ENDIF
   
-  CASE  7: //Check Down
-   IF |DOWN_BUTTON = OFF THEN
-    &fd100StepMsgTacc = 0 
-    &displayState = 9
-   ENDIF
- 
-  CASE  8: //Check Up
-   IF |UP_BUTTON = OFF THEN
-    &displayState = 6
-   ENDIF 
-  
-  CASE  9: //Display
+  CASE  3:
    //Display Step Msg
    &fd100StepMsgTacc = &fd100StepMsgTacc + &lastScanTimeShort
    IF &EDIT_STATE <> 0 THEN
@@ -1114,64 +1141,16 @@ MAIN_MACRO:
    
    &DATA_SOURCE_DISPLAY1 = ADDR(&T0acc)
    &DATA_SOURCE_DISPLAY2 = ADDR(&fd100StepNumber)
-   IF &EDIT_STATE = 0 and |DOWN_BUTTON = ON THEN
-    &displayState = 10
-   ELSIF &EDIT_STATE = 0 and |UP_BUTTON = ON THEN
-    &displayState = 8 
-   ENDIF
   
-  CASE  10: //Check Down
-   IF |DOWN_BUTTON = OFF THEN
-    &fd100StepMsgTacc = 0
-    &displayState = 12
-   ENDIF
- 
-  CASE  11: //Check Up
-   IF |UP_BUTTON = OFF THEN
-    &fd100StepMsgTacc = 0 
-    &displayState = 9
-   ENDIF 
-  
-  CASE  12: //Display   
+  CASE  4:
    &DATA_SOURCE_DISPLAY1 = ADDR(&T1acc)
    &DATA_SOURCE_DISPLAY2 = ADDR(&T2acc)
-   IF &EDIT_STATE = 0 and |DOWN_BUTTON = ON THEN
-    &displayState = 13
-   ELSIF &EDIT_STATE = 0 and |UP_BUTTON = ON THEN
-    &displayState = 11 
-   ENDIF
-  
-  CASE  13: //Check Down
-   IF |DOWN_BUTTON = OFF THEN
-    &displayState = 15
-   ENDIF    
 
-  CASE  14: //Check Up
-   IF |UP_BUTTON = OFF THEN
-    &displayState = 12
-    &fd100StepMsgTacc = 0
-   ENDIF  
-
-  CASE  15: //Display
+  CASE  5:
    &DATA_SOURCE_DISPLAY1 = ADDR(&FT01)
    &DATA_SOURCE_DISPLAY2 = ADDR(&FT02)
-   IF &EDIT_STATE = 0 and |DOWN_BUTTON = ON THEN
-    &displayState = 16
-   ELSIF &EDIT_STATE = 0 and |UP_BUTTON = ON THEN
-    &displayState = 14 
-   ENDIF
-  
-  CASE  16: //Check Down
-   IF |DOWN_BUTTON = OFF THEN
-    &displayState = 18
-   ENDIF  
- 
-  CASE  17: //Check Up                
-   IF |UP_BUTTON = OFF THEN
-    &displayState = 15
-   ENDIF
      
-  CASE  18: //Display
+  CASE  6:
    //Display Step Msg
    &fd100StepMsgTacc = &fd100StepMsgTacc + &lastScanTimeShort
    IF &EDIT_STATE <> 0 THEN
@@ -1184,24 +1163,139 @@ MAIN_MACRO:
    //Display Step Msg    
    &DATA_SOURCE_DISPLAY1 = ADDR(&TT01)
    &DATA_SOURCE_DISPLAY2 = ADDR(&fault)
-   IF &EDIT_STATE = 0 and |DOWN_BUTTON = ON THEN
-    &displayState = 19
-   ELSIF &EDIT_STATE = 0 and |UP_BUTTON = ON THEN
-    &displayState = 17 
-   ENDIF
-  
-  CASE  19: //Check Down
-   IF |DOWN_BUTTON = OFF THEN
-    &displayState = 0
-   ENDIF  
- 
-  CASE  20: //Check Up                
-   IF |UP_BUTTON = OFF THEN
-    &displayState = 18
-   ENDIF
    
+  CASE  7:
+   &DATA_SOURCE_DISPLAY1 = 0 // Clear top line (can only write to one line)
+   WRITE 2 "On: "+&runTimerDays+"d "+&runTimerHours+":"+&runTimerMinutes+":"+&runTimerSeconds
+   
+  CASE  8:
+   &DATA_SOURCE_DISPLAY1 = ADDR(&T1SP13)
+   WRITE 2 "      T1SP13 (x10s; Duration of production before backwash)      " 
+
+  CASE  9:
+   &DATA_SOURCE_DISPLAY1 = ADDR(&T0SP10)
+   WRITE 2 "      T0SP10 (x10s; Module 1 backflush duration)      " 
+
+  CASE 10:
+   &DATA_SOURCE_DISPLAY1 = ADDR(&T0SP12)
+   WRITE 2 "      T0SP12 (x10s; Module 2 backflush duration)      " 
+
+  CASE 11:
+   &DATA_SOURCE_DISPLAY1 = ADDR(&T0SP14)
+   WRITE 2 "      T0SP14 (x10s; Module 3 backflush duration)      " 
+ 
+      
   DEFAULT:
  ENDSEL
+
+ IF |F1_BUTTON = ON AND |F3_BUTTON =ON AND &STATE = 0 THEN
+  SELECT &displayState 
+   CASE  1:
+    EDIT &LT01SP01
+    &EDIT_MAX=1000
+    &EDIT_MIN=0
+    &EDIT_DEF=&LT01SP01
+    WRITE ""
+    WRITE "LT01SP01 (%)"
+    &STATE=ADDR(&LT01SP01)
+
+   CASE  2:
+    EDIT &PP01SP01
+    &EDIT_MAX=10000
+    &EDIT_MIN=0
+    &EDIT_DEF=&PP01SP01
+    WRITE ""
+    WRITE "PP01SP01 (%)"
+    &STATE=ADDR(&PP01SP01)
+    
+   CASE  3:
+    EDIT &T0SP09
+    &EDIT_MAX=32000
+    &EDIT_MIN=0
+    &EDIT_DEF=&T0SP09
+    WRITE ""
+    WRITE "T0SP09 (s)"
+    &STATE=ADDR(&T0SP09)
+    
+   CASE   4:
+    EDIT &T1SP13
+    &EDIT_MAX=32000
+    &EDIT_MIN=0
+    &EDIT_DEF=&T1SP13
+    WRITE ""
+    WRITE "T1SP13 (s)"
+    &STATE=ADDR(&T1SP13)
+
+   CASE   8:
+    EDIT &T1SP13   
+    &EDIT_MAX=32000
+    &EDIT_MIN=0
+    &EDIT_DEF=&T1SP13
+    &STATE=ADDR(&T1SP13)
+    // Accept the scrolling text from the display page
+
+   CASE   9:
+    EDIT &T0SP10
+    &EDIT_MAX=32000
+    &EDIT_MIN=0
+    &EDIT_DEF=&T0SP10
+    &STATE=ADDR(&T0SP10)
+    // Accept the scrolling text from the display page
+
+   CASE  10:
+    EDIT &T0SP12
+    &EDIT_MAX=32000
+    &EDIT_MIN=0
+    &EDIT_DEF=&T0SP12
+    &STATE=ADDR(&T0SP12)
+    // Accept the scrolling text from the display page
+    
+   CASE  11:
+    EDIT &T0SP14
+    &EDIT_MAX=32000
+    &EDIT_MIN=0
+    &EDIT_DEF=&T0SP14
+    &STATE=ADDR(&T0SP14)
+    // Accept the scrolling text from the display page
+
+   DEFAULT:
+  ENDSEL  
+ ENDIF
+
+ IF |F1_BUTTON = ON AND |F4_BUTTON =ON AND &STATE = 0 THEN
+  SELECT &displayState
+   CASE  1:
+    EDIT &LT02SP01
+    &EDIT_MAX=1000
+    &EDIT_MIN=0
+    &EDIT_DEF=&LT02SP01
+    WRITE ""
+    WRITE "LT02SP01 (%)"
+    &STATE=ADDR(&LT02SP01)    
+   
+   CASE  2:
+    EDIT &PP02SP02
+    &EDIT_MAX=10000
+    &EDIT_MIN=0
+    &EDIT_DEF=&PP02SP02
+    WRITE ""
+    WRITE "PP02SP02 (%)"
+    &STATE=ADDR(&PP02SP02)
+    
+   CASE  4:
+    EDIT &T2SP13
+    &EDIT_MAX=32000
+    &EDIT_MIN=0
+    &EDIT_DEF=&T2SP13
+    WRITE ""
+    WRITE "T2SP13 (s)"
+    &STATE=ADDR(&T2SP13) 
+    
+   DEFAULT:
+  ENDSEL  
+ ENDIF
+
+
 
 
 
@@ -2991,80 +3085,6 @@ MAIN_MACRO:
  |PP02_O = |PP02out
  
   
- IF |F1_BUTTON = ON AND |F3_BUTTON =ON AND &STATE = 0 THEN
-  SELECT &displayState 
-   CASE  3:
-    EDIT &LT01SP01
-    &EDIT_MAX=1000
-    &EDIT_MIN=0
-    &EDIT_DEF=&LT01SP01
-    WRITE ""
-    WRITE "LT01SP01 (%)"
-    &STATE=ADDR(&LT01SP01)
-
-   CASE  6:
-    EDIT &PP01SP01
-    &EDIT_MAX=10000
-    &EDIT_MIN=0
-    &EDIT_DEF=&PP01SP01
-    WRITE ""
-    WRITE "PP01SP01 (%)"
-    &STATE=ADDR(&PP01SP01)
-    
-   CASE  9:
-    EDIT &T0SP09
-    &EDIT_MAX=32000
-    &EDIT_MIN=0
-    &EDIT_DEF=&T0SP09
-    WRITE ""
-    WRITE "T0SP09 (s)"
-    &STATE=ADDR(&T0SP09)
-    
-   CASE  12:
-    EDIT &T1SP13
-    &EDIT_MAX=32000
-    &EDIT_MIN=0
-    &EDIT_DEF=&T1SP13
-    WRITE ""
-    WRITE "T1SP13 (s)"
-    &STATE=ADDR(&T1SP13)
-    
-   DEFAULT:
-  ENDSEL  
- ENDIF
-
- IF |F1_BUTTON = ON AND |F4_BUTTON =ON AND &STATE = 0 THEN
-  SELECT &displayState
-   CASE  3:
-    EDIT &LT02SP01
-    &EDIT_MAX=1000
-    &EDIT_MIN=0
-    &EDIT_DEF=&LT02SP01
-    WRITE ""
-    WRITE "LT02SP01 (%)"
-    &STATE=ADDR(&LT02SP01)    
-   
-   CASE  6:
-    EDIT &PP02SP02
-    &EDIT_MAX=10000
-    &EDIT_MIN=0
-    &EDIT_DEF=&PP02SP02
-    WRITE ""
-    WRITE "PP02SP02 (%)"
-    &STATE=ADDR(&PP02SP02)
-    
-   CASE  12:
-    EDIT &T2SP13
-    &EDIT_MAX=32000
-    &EDIT_MIN=0
-    &EDIT_DEF=&T2SP13
-    WRITE ""
-    WRITE "T2SP13 (s)"
-    &STATE=ADDR(&T2SP13) 
-    
-   DEFAULT:
-  ENDSEL  
- ENDIF
 END
 
 //Called by the operating system when Prog button is pressed in edit mode
@@ -3513,15 +3533,15 @@ EDIT_MACRO:
    WRITE "T0SP10 (s)"
    &STATE=ADDR(&T0SP10)
    
-  CASE ADDR(&T0SP10):
-   EXIT_EDIT &T0SP10
-   EDIT &T0SP11
-   &EDIT_MAX=32000
-   &EDIT_MIN=0
-   &EDIT_DEF=&T0SP11
-   WRITE ""
-   WRITE "T0SP11 (s)"
-   &STATE=ADDR(&T0SP11)
+//  CASE ADDR(&T0SP10):
+//   EXIT_EDIT &T0SP10
+//   EDIT &T0SP11
+//   &EDIT_MAX=32000
+//   &EDIT_MIN=0
+//   &EDIT_DEF=&T0SP11
+//   WRITE ""
+//   WRITE "T0SP11 (s)"
+//   &STATE=ADDR(&T0SP11)
    
   CASE ADDR(&T0SP11):
    EXIT_EDIT &T0SP11
@@ -3533,15 +3553,15 @@ EDIT_MACRO:
    WRITE "T0SP12 (s)"
    &STATE=ADDR(&T0SP12)
    
-  CASE ADDR(&T0SP12):
-   EXIT_EDIT &T0SP12
-   EDIT &T0SP13
-   &EDIT_MAX=32000
-   &EDIT_MIN=0
-   &EDIT_DEF=&T0SP13
-   WRITE ""
-   WRITE "T0SP13 (s)"
-   &STATE=ADDR(&T0SP13)   
+//  CASE ADDR(&T0SP12):
+//   EXIT_EDIT &T0SP12
+//   EDIT &T0SP13
+//   &EDIT_MAX=32000
+//   &EDIT_MIN=0
+//   &EDIT_DEF=&T0SP13
+//   WRITE ""
+//   WRITE "T0SP13 (s)"
+//   &STATE=ADDR(&T0SP13)   
    
   CASE ADDR(&T0SP13):
    EXIT_EDIT &T0SP13
@@ -3553,28 +3573,28 @@ EDIT_MACRO:
    WRITE "T0SP14 (s)"
    &STATE=ADDR(&T0SP14)   
       
-  CASE ADDR(&T0SP14):
-   EXIT_EDIT &T0SP14
-   EDIT &T0SP18
-   &EDIT_MAX=32000
-   &EDIT_MIN=0
-   &EDIT_DEF=&T0SP18
-   WRITE ""
-   WRITE "T0SP18 (s)"
-   &STATE=ADDR(&T0SP18)   
+//  CASE ADDR(&T0SP14):
+//   EXIT_EDIT &T0SP14
+//   EDIT &T0SP18
+//   &EDIT_MAX=32000
+//   &EDIT_MIN=0
+//   &EDIT_DEF=&T0SP18
+//   WRITE ""
+//   WRITE "T0SP18 (s)"
+//   &STATE=ADDR(&T0SP18)   
       
   CASE ADDR(&T0SP18):
    EXIT_EDIT &T0SP18
          
-  CASE ADDR(&T1SP13):
-   EXIT_EDIT &T1SP13
-   EDIT &T1SP33
-   &EDIT_MAX=32000
-   &EDIT_MIN=0
-   &EDIT_DEF=&T1SP33
-   WRITE ""
-   WRITE "T1SP33 (s)"
-   &STATE=ADDR(&T1SP33)   
+//  CASE ADDR(&T1SP13):
+//   EXIT_EDIT &T1SP13
+//   EDIT &T1SP33
+//   &EDIT_MAX=32000
+//   &EDIT_MIN=0
+//   &EDIT_DEF=&T1SP33
+//   WRITE ""
+//   WRITE "T1SP33 (s)"
+//   &STATE=ADDR(&T1SP33)   
       
   CASE ADDR(&T1SP33):
    EXIT_EDIT &T1SP33
@@ -3591,7 +3611,19 @@ EDIT_MACRO:
       
   CASE ADDR(&T2SP33):
    EXIT_EDIT &T2SP33 
-      
+
+  CASE ADDR(&T1SP13):
+   EXIT_EDIT &T1SP13 
+
+  CASE ADDR(&T0SP10):
+   EXIT_EDIT &T0SP10 
+
+  CASE ADDR(&T0SP12):
+   EXIT_EDIT &T0SP12 
+
+  CASE ADDR(&T0SP14):
+   EXIT_EDIT &T0SP14 
+
   //DEFAULT:
   // &STATE = 0
  ENDSEL
